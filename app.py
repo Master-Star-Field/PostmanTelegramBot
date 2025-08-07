@@ -62,8 +62,6 @@ def start_bot_process():
     
     # Проверяем, что процесс еще не запущен
     if bot_process is None or not bot_process.is_alive():
-        # Создаем новый процесс. Daemon=True гарантирует, что процесс будет убит,
-        # когда основной процесс завершится.
         bot_process = multiprocessing.Process(target=start_bot_process_target, daemon=True)
         bot_process.start()
         print(f"✅ Запущен дочерний процесс бота с PID: {bot_process.pid}")
