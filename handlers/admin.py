@@ -8,7 +8,6 @@ import io
 import base64
 from database.db import get_stats_data
 from services.stats import generate_stats_image
-
 router = Router()
 
 def is_admin(user_id):
