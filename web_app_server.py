@@ -705,4 +705,4 @@ if __name__ == "__main__":
     print("  И обновите WEB_APP_URL в .env файле")
     print("=" * 50)
     
-    app.run(debug=False, host="0.0.0.0", port=8082, use_reloader=False)
+    app.run(debug=False, host="0.0.0.0", port=80, use_reloader=False)
