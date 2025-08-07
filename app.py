@@ -53,20 +53,9 @@ def run_flask():
     try:
         # Инициализируем демо данные для Flask приложения
         web_app_server.init_demo_data()
-        print("✅ Демо данные инициализированы.")
-
-        print("=" * 50)
-        print("🚀 Flask Web App сервер запущен!")
-        print("Для локальной разработки используйте:")
-        print("  http://localhost:8082/")
-        print("")
-        print("Для Telegram Web App используйте ngrok:")
-        print("  ngrok http 8082")
-        print("  И обновите WEB_APP_URL в .env файле")
-        print("=" * 50)
 
         # Запуск Flask приложения
-        flask_app.run(debug=False, host="0.0.0.0", port=8082, use_reloader=False)
+        flask_app.run(debug=True, host="0.0.0.0", port=8080)
 
     except Exception as e:
         print(f"❌ Ошибка при запуске Flask сервера: {e}")
