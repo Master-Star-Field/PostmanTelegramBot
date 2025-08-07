@@ -697,12 +697,6 @@ if __name__ == "__main__":
     
     print("=" * 50)
     print("Web App сервер запущен!")
-    print("Для локальной разработки используйте:")
-    print("  http://localhost:8082/")
-    print("")
-    print("Для Telegram Web App используйте ngrok:")
-    print("  ngrok http 8082")
-    print("  И обновите WEB_APP_URL в .env файле")
-    print("=" * 50)
+
     
-    app.run(debug=True, host="0.0.0.0", port=80, use_reloader=False)
+    app.run(debug=True, host="0.0.0.0", port=8080)#, use_reloader=False
