@@ -116,7 +116,6 @@ ngrok http 8080
 # 2. Запустите Web App сервер в одном терминале
 python web_app_server.py
 
-# 3. Запустите Telegram бота в другом терминале
 python main.py
 ```
 
