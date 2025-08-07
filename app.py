@@ -15,12 +15,17 @@ from handlers import user, admin, callbacks
 from database.db import init_db
 from web_app_server import app as flask_app  # Импортируем Flask приложение
 
-# Флаг для отслеживания, был ли бот уже запущен
-bot_started = False
+# Глобальные переменные для бота
 bot_thread = None
+bot_running = False
 
 async def run_bot():
     """Асинхронная функция для запуска Telegram бота."""
+    global bot_running
+    if bot_running:
+        print("🤖 Бот уже запущен!")
+        return
+
     try:
         await init_db()
         print("✅ База данных инициализирована.")
@@ -35,7 +40,8 @@ async def run_bot():
         dp.include_router(callbacks.router)
 
         print("🤖 Telegram бот запущен!")
-        
+        bot_running = True
+
         # Запускаем поллинг
         await dp.start_polling(bot)
 
@@ -44,6 +50,7 @@ async def run_bot():
         import traceback
         traceback.print_exc()
     finally:
+        bot_running = False
         print("🛑 Telegram бот остановлен.")
 
 def start_bot_in_thread():
@@ -69,25 +76,28 @@ def start_bot_in_thread():
     else:
         print("⚠️ Поток бота уже запущен.")
 
-# Добавляем обработчик для запуска бота при первом запросе
-@flask_app.before_request
-def initialize_bot_on_first_request():
-    """Инициализация бота при первом запросе к Flask приложению."""
-    global bot_started
-    if not bot_started:
-        print("🏁 Инициализация Telegram бота при первом запросе...")
-        start_bot_in_thread()
-        bot_started = True
+def stop_bot_thread():
+    """Функция для остановки потока бота."""
+    global bot_thread, bot_running
+    if bot_thread and bot_thread.is_alive():
+        bot_running = False
+        print("🛑 Остановка потока бота...")
+        # Здесь можно добавить логику graceful shutdown для бота
 
 # Обработчики сигналов для корректного завершения
 def signal_handler(signum, frame):
     """Обработчик сигналов для корректного завершения."""
     print(f"\n⚠️ Получен сигнал {signum}. Завершение работы...")
+    stop_bot_thread()
     sys.exit(0)
 
 # Регистрируем обработчики сигналов
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
+
+# Запускаем бота при импорте модуля
+print("🏁 Инициализация Telegram бота...")
+start_bot_in_thread()
 
 # Экспортируем Flask приложение для Gunicorn
 app = flask_app
@@ -103,3 +113,5 @@ if __name__ == "__main__":
         flask_app.run(debug=False, host="0.0.0.0", port=port, use_reloader=False)
     except KeyboardInterrupt:
         print("\n🛑 Сервер остановлен пользователем")
+    finally:
+        stop_bot_thread()
