@@ -18,7 +18,7 @@ CORS(app, resources={
 })
 
 # Путь к базе данных
-DB_PATH = os.getenv('DATABASE_PATH', 'database/bot.db')
+DB_PATH = os.environ.get("DATABASE_PATH", "database/bot.db")
 
 def get_db():
     """Получение соединения с базой данных"""
