@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Почтовое Бюро</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 10px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        header {
+            background: #4a5568;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        header h1 {
+            margin-bottom: 10px;
+        }
+
+        main {
+            padding: 20px;
+        }
+
+        .step {
+            padding: 20px 0;
+        }
+
+        .step h2 {
+            color: #2d3748;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        input, button, textarea, select {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        input[type="number"] {
+            width: 100px;
+        }
+
+        button {
+            background: #4299e1;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s;
+            padding: 12px 20px;
+        }
+
+        button:hover {
+            background: #3182ce;
+        }
+
+        button:disabled {
+            background: #a0aec0;
+            cursor: not-allowed;
+        }
+
+        .time-ranges, .time-windows, .locations {
+            margin: 20px 0;
+        }
+
+        .time-window, .location-item {
+            background: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .time-window:hover, .location-item:hover {
+            background: #ebf8ff;
+            border-color: #4299e1;
+            transform: translateY(-2px);
+        }
+
+        .time-window.selected, .location-item.selected {
+            background: #4299e1;
+            color: white;
+            border-color: #3182ce;
+        }
+
+        .time-window.unavailable {
+            background: #f5f5f5;
+            color: #999;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .time-window.unavailable:hover {
+            background: #f5f5f5;
+            border-color: #e2e8f0;
+            transform: none;
+        }
+
+        .cards-form .card-type {
+            background: #f7fafc;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .card-info {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .card-info p {
+            margin: 5px 0;
+        }
+
+        .cards-form label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .options {
+            background: #f7fafc;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+
+        .options label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 10px 0;
+        }
+
+        .order-details .form-group {
+            margin: 15px 0;
+        }
+
+        .order-details label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .order-details input {
+            width: 100%;
+        }
+
+        .date-header {
+            background: #e2e8f0;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+
+        #userIdDisplay {
+            font-size: 12px;
+            margin-top: 5px;
+            padding: 5px;
+            border-radius: 3px;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                margin: 10px;
+                border-radius: 10px;
+            }
+            
+            main {
+                padding: 15px;
+            }
+            
+            input, button, textarea, select {
+                padding: 10px;
+                font-size: 14px;
+            }
+            
+            .options label {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+
+        @media (min-width: 768px) {
+            /* Стили для десктопа */
+            input, button, textarea, select {
+                -webkit-appearance: none;
+                -moz-appearance: none;
+                appearance: none;
+            }
+            
+            input:focus, textarea:focus, select:focus {
+                outline: none;
+                border-color: #4299e1;
+                box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📬 Почтовое Бюро</h1>
+            <p>Оформление заказа</p>
+            <div id="userIdDisplay"></div>
+        </header>
+        
+        <main>
+            <div class="step" id="step1">
+                <h2>📅 Доступные времена встреч</h2>
+                <div id="allTimeRanges" class="time-ranges"></div>
+                <button onclick="loadAllTimeRanges()">Обновить список</button>
+            </div>
+            
+            <div class="step" id="step2" style="display: none;">
+                <h2>🕐 Выберите время</h2>
+                <div id="selectedDateInfo"></div>
+                <div id="timeWindows" class="time-windows"></div>
+                <button onclick="prevStep(1)">Назад</button>
+            </div>
+            
+            <div class="step" id="step3" style="display: none;">
+                <h2>📍 Выберите место встречи</h2>
+                <div id="locations" class="locations"></div>
+                <input type="text" id="customLocation" placeholder="Или введите своё место">
+                <button onclick="prevStep(2)">Назад</button>
+                <button onclick="nextStep(4)">Далее</button>
+            </div>
+            
+            <div class="step" id="step4" style="display: none;">
+                <h2>💌 Оформите открытки</h2>
+                
+                <div class="card-info">
+                    <p><strong>Красные открытки:</strong> Срочные письма с приоритетной доставкой</p>
+                    <p><strong>Синие открытки:</strong> Стандартные письма с обычной доставкой</p>
+                    <p><strong>Зелёные открытки:</strong> Секретные письма с дополнительной защитой</p>
+                </div>
+                
+                <div class="cards-form">
+                    <div class="card-type">
+                        <label>Красные открытки (макс. 2):</label>
+                        <input type="number" id="cardType1" min="0" max="2" value="0">
+                    </div>
+                    <div class="card-type">
+                        <label>Синие открытки (макс. 2):</label>
+                        <input type="number" id="cardType2" min="0" max="2" value="0">
+                    </div>
+                    <div class="card-type">
+                        <label>Зелёные открытки (макс. 2):</label>
+                        <input type="number" id="cardType3" min="0" max="2" value="0">
+                    </div>
+                </div>
+                
+                <div class="order-details">
+                    <div class="form-group">
+                        <label for="recipientName">Имя получателя:</label>
+                        <input type="text" id="recipientName" placeholder="Кому отправить">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="deliveryAddress">Адрес доставки:</label>
+                        <input type="text" id="deliveryAddress" placeholder="Куда доставить">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="clientName">Как к вам обращаться:</label>
+                        <input type="text" id="clientName" placeholder="Ваше имя">
+                    </div>
+                </div>
+                
+                <div class="options">
+                    <label>
+                        Анонимная отправка
+                        <input type="checkbox" id="anonymous">
+                    </label>
+                    <label>
+                        Задержка доставки (дней):
+                        <input type="number" id="delayDays" min="0" max="14" value="0">
+                    </label>
+                </div>
+                <button onclick="prevStep(3)">Назад</button>
+                <button onclick="submitOrder()">Оформить заказ</button>
+            </div>
+        </main>
+    </div>
+    
+<script>
+    let currentStep = 1;
+    let selectedTimeWindow = null;
+    let selectedLocation = null;
+    let userId = null;
+    let chatId = null;
+    let allTimeRanges = [];
+
+    // Получаем userId и chatId из URL параметров
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        userId = urlParams.get('user_id');
+        chatId = urlParams.get('chat_id');
+        
+        if (userId) {
+            console.log('User ID from URL params:', userId);
+            document.getElementById('userIdDisplay').innerHTML = `
+                <div style="background: #4CAF50; color: white; padding: 10px; border-radius: 5px; margin: 10px 0;">
+                    ✅ Ваш Telegram ID: ${userId}
+                </div>
+            `;
+        } else {
+            console.warn('User ID not found in URL params');
+            // Для тестирования
+            userId = 5470441329; // Ваш реальный Telegram ID
+            document.getElementById('userIdDisplay').innerHTML = `
+                <div style="background: #ff9800; color: white; padding: 10px; border-radius: 5px; margin: 10px 0;">
+                    ⚠️ Режим тестирования (ID: ${userId})
+                </div>
+            `;
+        }
+        
+        if (chatId) {
+            console.log('Chat ID from URL params:', chatId);
+        }
+        
+        loadAllTimeRanges();
+    });
+
+    function nextStep(step) {
+        document.getElementById(`step${currentStep}`).style.display = 'none';
+        currentStep = step;
+        document.getElementById(`step${currentStep}`).style.display = 'block';
+    }
+
+    function prevStep(step) {
+        document.getElementById(`step${currentStep}`).style.display = 'none';
+        currentStep = step;
+        document.getElementById(`step${currentStep}`).style.display = 'block';
+    }
+
+    async function loadAllTimeRanges() {
+        try {
+            const container = document.getElementById('allTimeRanges');
+            container.innerHTML = '<p>⏳ Загрузка временных диапазонов...</p>';
+            
+            // Загружаем диапазоны на ближайшие 7 дней
+            const today = new Date();
+            const promises = [];
+            
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(today);
+                date.setDate(today.getDate() + i);
+                const dateStr = date.toISOString().split('T')[0];
+                promises.push(fetch(`/api/time-ranges/${dateStr}`).then(r => {
+                    if (r.ok) {
+                        return r.json().then(data => ({date: dateStr, ranges: data}));
+                    } else {
+                        console.error(`Error loading time ranges for ${dateStr}:`, r.status);
+                        return {date: dateStr, ranges: []};
+                    }
+                }));
+            }
+            
+            const results = await Promise.all(promises);
+            allTimeRanges = results;
+            
+            displayAllTimeRanges();
+        } catch (error) {
+            console.error('Ошибка загрузки временных диапазонов:', error);
+            document.getElementById('allTimeRanges').innerHTML = '<p>❌ Ошибка загрузки данных</p>';
+        }
+    }
+
+    function displayAllTimeRanges() {
+        const container = document.getElementById('allTimeRanges');
+        container.innerHTML = '';
+        
+        let hasRanges = false;
+        
+        if (allTimeRanges && Array.isArray(allTimeRanges)) {
+            allTimeRanges.forEach(dateData => {
+                if (dateData && dateData.ranges && dateData.ranges.length > 0) {
+                    hasRanges = true;
+                    
+                    // Форматируем дату
+                    const dateObj = new Date(dateData.date);
+                    const formattedDate = dateObj.toLocaleDateString('ru-RU', {
+                        weekday: 'long',
+                        day: 'numeric',
+                        month: 'long'
+                    });
+                    
+                    const dateHeader = document.createElement('div');
+                    dateHeader.className = 'date-header';
+                    dateHeader.textContent = formattedDate;
+                    container.appendChild(dateHeader);
+                    
+                    dateData.ranges.forEach(range => {
+                        if (range) {
+                            const rangeElement = document.createElement('div');
+                            rangeElement.className = 'time-window';
+                            rangeElement.innerHTML = `
+                                <strong>${range.start_time} - ${range.end_time}</strong><br>
+                                <small>Шаг: ${range.window_duration_min} минут</small>
+                            `;
+                            rangeElement.onclick = () => loadTimeWindows(range, formattedDate);
+                            container.appendChild(rangeElement);
+                        }
+                    });
+                }
+            });
+        }
+        
+        if (!hasRanges) {
+            container.innerHTML = '<p>📭 Нет доступных временных диапазонов</p>';
+        }
+    }
+
+    async function loadTimeWindows(range, dateText) {
+        try {
+            const response = await fetch(`/api/time-windows/${range.id}`);
+            const windows = await response.json();
+            
+            displayTimeWindows(windows, range.id, dateText);
+        } catch (error) {
+            console.error('Ошибка загрузки временных окон:', error);
+            alert('❌ Ошибка загрузки временных окон');
+        }
+    }
+
+    function displayTimeWindows(windows, rangeId, dateText) {
+        const container = document.getElementById('timeWindows');
+        const dateInfo = document.getElementById('selectedDateInfo');
+        
+        dateInfo.innerHTML = `<div class="date-header">${dateText}</div>`;
+        container.innerHTML = '<h3>Доступные временные окна:</h3>';
+        
+        if (windows.length === 0) {
+            container.innerHTML += '<p>📭 Нет доступных временных окон</p>';
+            nextStep(2);
+            return;
+        }
+        
+        let hasAvailableWindows = false;
+        
+        windows.forEach((window) => {
+            const windowElement = document.createElement('div');
+            windowElement.className = window.is_available ? 'time-window' : 'time-window unavailable';
+            
+            if (window.is_available) {
+                hasAvailableWindows = true;
+                windowElement.innerHTML = `${window.start_time} - ${window.end_time}`;
+                windowElement.onclick = () => {
+                    // Снимаем выделение с других окон
+                    document.querySelectorAll('.time-window').forEach(el => {
+                        el.classList.remove('selected');
+                    });
+                    // Выделяем выбранное окно
+                    windowElement.classList.add('selected');
+                    selectedTimeWindow = { 
+                        id: window.id,
+                        rangeId: rangeId, 
+                        start: window.start_time, 
+                        end: window.end_time 
+                    };
+                };
+            } else {
+                windowElement.innerHTML = `${window.start_time} - ${window.end_time} (занято)`;
+            }
+            
+            container.appendChild(windowElement);
+        });
+        
+        if (!hasAvailableWindows) {
+            container.innerHTML += '<p>🔒 Все окна в этом диапазоне заняты</p>';
+        }
+        
+        // Добавляем кнопку "Далее"
+        const nextButton = document.createElement('button');
+        nextButton.textContent = '➡️ Далее';
+        nextButton.onclick = () => {
+            if (selectedTimeWindow) {
+                loadLocations();
+                nextStep(3);
+            } else {
+                alert('⚠️ Пожалуйста, выберите временной интервал');
+            }
+        };
+        container.appendChild(nextButton);
+        
+        // Добавляем кнопку "Назад"
+        const backButton = document.createElement('button');
+        backButton.textContent = '⬅️ Назад';
+        backButton.onclick = () => prevStep(1);
+        container.appendChild(backButton);
+        
+        nextStep(2);
+    }
+
+    async function loadLocations() {
+        try {
+            const response = await fetch('/api/locations');
+            const locations = await response.json();
+            displayLocations(locations);
+        } catch (error) {
+            console.error('Ошибка загрузки локаций:', error);
+            alert('❌ Ошибка загрузки локаций');
+        }
+    }
+
+    function displayLocations(locations) {
+        const container = document.getElementById('locations');
+        container.innerHTML = '<h3>Выберите место встречи:</h3>';
+        
+        locations.forEach(location => {
+            const locationElement = document.createElement('div');
+            locationElement.className = 'location-item';
+            locationElement.innerHTML = `
+                <strong>${location.name}</strong><br>
+                <small>${location.address}</small>
+            `;
+            locationElement.onclick = () => {
+                // Снимаем выделение с других локаций
+                document.querySelectorAll('.location-item').forEach(el => {
+                    el.classList.remove('selected');
+                });
+                // Выделяем выбранную локацию
+                locationElement.classList.add('selected');
+                selectedLocation = location;
+            };
+            container.appendChild(locationElement);
+        });
+    }
+
+    async function submitOrder() {
+        // Проверяем, что выбрано хотя бы одно письмо
+        const cardType1 = parseInt(document.getElementById('cardType1').value) || 0;
+        const cardType2 = parseInt(document.getElementById('cardType2').value) || 0;
+        const cardType3 = parseInt(document.getElementById('cardType3').value) || 0;
+        
+        if (cardType1 + cardType2 + cardType3 === 0) {
+            alert('⚠️ Пожалуйста, выберите хотя бы одну открытку');
+            return;
+        }
+        
+        const cardCounts = {
+            1: cardType1,
+            2: cardType2,
+            3: cardType3
+        };
+        
+        const anonymous = document.getElementById('anonymous').checked;
+        const delayDays = parseInt(document.getElementById('delayDays').value) || 0;
+        const customLocation = document.getElementById('customLocation').value;
+        
+        // Новые поля
+        const recipientName = document.getElementById('recipientName').value;
+        const deliveryAddress = document.getElementById('deliveryAddress').value;
+        const clientName = document.getElementById('clientName').value;
+        
+        // Валидация
+        if (!selectedTimeWindow) {
+            alert('⚠️ Пожалуйста, выберите время встречи');
+            return;
+        }
+        
+        if (!selectedLocation && !customLocation) {
+            alert('⚠️ Пожалуйста, выберите место встречи или введите своё');
+            return;
+        }
+        
+        if (!recipientName.trim()) {
+            alert('⚠️ Пожалуйста, укажите имя получателя');
+            return;
+        }
+        
+        if (!deliveryAddress.trim()) {
+            alert('⚠️ Пожалуйста, укажите адрес доставки');
+            return;
+        }
+        
+        if (!clientName.trim()) {
+            alert('⚠️ Пожалуйста, укажите, как к вам обращаться');
+            return;
+        }
+        
+        if (!userId) {
+            alert('❌ Не удалось определить ваш ID пользователя. Пожалуйста, перезагрузите страницу.');
+            return;
+        }
+        
+ try {
+    const orderData = {
+        user_id: userId,
+        window_id: selectedTimeWindow.id,
+        location_data: {
+            location_id: selectedLocation ? selectedLocation.id : null,
+            custom_location: customLocation || null
+        },
+        card_data: {
+            counts: cardCounts
+        },
+        anonymous: anonymous,
+        delay_days: delayDays,
+        recipient_name: recipientName,
+        delivery_address: deliveryAddress,
+        client_name: clientName
+    };
+    
+    console.log('📤 Отправка заказа:', orderData);
+    
+    const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(orderData)
+    });
+    
+    const result = await response.json();
+    console.log('📥 Ответ сервера:', result);
+    
+    if (response.ok) {
+        alert('✅ Заказ успешно оформлен! Мы свяжемся с вами для подтверждения.');
+        // Сброс формы
+        resetForm();
+        // Возвращаемся к первому шагу
+        prevStep(1);
+        // Обновляем список диапазонов
+        loadAllTimeRanges();
+    } else {
+        alert('❌ ' + (result.error || 'Ошибка оформления заказа'));
+    }
+} catch (error) {
+    console.error('❌ Ошибка оформления заказа:', error);
+    alert('❌ Ошибка оформления заказа. Пожалуйста, попробуйте позже.');
+}
+        }
+    function resetForm() {
+        // Сброс всех полей
+        document.getElementById('cardType1').value = 0;
+        document.getElementById('cardType2').value = 0;
+        document.getElementById('cardType3').value = 0;
+        document.getElementById('anonymous').checked = false;
+        document.getElementById('delayDays').value = 0;
+        document.getElementById('customLocation').value = '';
+        document.getElementById('recipientName').value = '';
+        document.getElementById('deliveryAddress').value = '';
+        document.getElementById('clientName').value = '';
+        
+        // Сброс выделений
+        selectedTimeWindow = null;
+        selectedLocation = null;
+        document.querySelectorAll('.selected').forEach(el => {
+            el.classList.remove('selected');
+        });
+    }
+</script>
+</body>
+</html>
