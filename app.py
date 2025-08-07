@@ -1,28 +1,39 @@
-# app.py
 from flask import Flask
-from threading import Thread
 import asyncio
+import threading
 import logging
-import signal
-import sys
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
+import signal
+import sys
 
-# Импортируем логику Flask-приложения из вашего файла
-import web_app_server  # Убедитесь, что этот файл существует
+# Импортируем ваши модули
 from config import BOT_TOKEN
 from handlers import user, admin, callbacks
 from database.db import init_db
 
-# --- Настройка Flask ---
-# Используем Flask-приложение из web_app_server.py
-flask_app = web_app_server.app
+# Создаем Flask приложение
+flask_app = Flask(__name__)
 
-# --- Настройка Telegram бота ---
-shutdown_event = asyncio.Event()
+@flask_app.route('/')
+def home():
+    return "🚀 Почтовое Бюро - сервер и бот запущены!"
+
+@flask_app.route('/health')
+def health_check():
+    return {"status": "healthy", "message": "Server is running"}
+
+# Глобальные переменные для бота
+bot_thread = None
+bot_running = False
 
 async def run_bot():
     """Асинхронная функция для запуска Telegram бота."""
+    global bot_running
+    if bot_running:
+        print("🤖 Бот уже запущен!")
+        return
+
     try:
         await init_db()
         print("✅ База данных инициализирована.")
@@ -37,72 +48,84 @@ async def run_bot():
         dp.include_router(callbacks.router)
 
         print("🤖 Telegram бот запущен!")
+        bot_running = True
 
-        # Запускаем поллинг до тех пор, пока не будет установлен shutdown_event
-        await dp.start_polling(bot, handle_as_tasks=True)
+        # Запускаем поллинг
+        await dp.start_polling(bot)
 
     except Exception as e:
         print(f"❌ Ошибка при запуске бота: {e}")
-        raise  # Повторно вызываем исключение для корректной обработки
+        import traceback
+        traceback.print_exc()
     finally:
+        bot_running = False
         print("🛑 Telegram бот остановлен.")
 
+def start_bot_in_thread():
+    """Функция для запуска бота в отдельном потоке."""
+    def run_bot_loop():
+        try:
+            # Создаем новый event loop для потока
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
+            # Запускаем бота в этом loop
+            loop.run_until_complete(run_bot())
+        except Exception as e:
+            print(f"💥 Критическая ошибка в потоке бота: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    global bot_thread
+    if bot_thread is None or not bot_thread.is_alive():
+        bot_thread = threading.Thread(target=run_bot_loop, daemon=True)
+        bot_thread.start()
+        print("🧵 Поток Telegram бота запущен.")
+    else:
+        print("⚠️ Поток бота уже запущен.")
 
-def run_flask():
-    """Функция для запуска Flask сервера в отдельном потоке."""
-    try:
-        # Инициализируем демо данные для Flask приложения
-        web_app_server.init_demo_data()
+def stop_bot_thread():
+    """Функция для остановки потока бота."""
+    global bot_thread, bot_running
+    if bot_thread and bot_thread.is_alive():
+        bot_running = False
+        print("🛑 Остановка потока бота...")
+        # Здесь можно добавить логику graceful shutdown для бота
 
-        # Запуск Flask приложения
-        flask_app.run(debug=True, host="0.0.0.0", port=8080)
+# Запускаем бота при старте Flask приложения
+@flask_app.before_first_request
+def initialize_bot():
+    """Инициализация бота при первом запросе к Flask приложению."""
+    print("🏁 Инициализация Telegram бота...")
+    start_bot_in_thread()
 
-    except Exception as e:
-        print(f"❌ Ошибка при запуске Flask сервера: {e}")
-
-
+# Обработчики сигналов для корректного завершения
 def signal_handler(signum, frame):
     """Обработчик сигналов для корректного завершения."""
     print(f"\n⚠️ Получен сигнал {signum}. Завершение работы...")
-    shutdown_event.set()
+    stop_bot_thread()
+    sys.exit(0)
 
+# Регистрируем обработчики сигналов
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
 
-def keep_alive():
-    """Главная функция для запуска всего приложения."""
-    print("🚀 Запуск Почтового Бюро...")
-
-    # Регистрируем обработчики сигналов для корректного завершения
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
-
-    # --- Запуск Flask сервера в отдельном потоке ---
-    flask_thread = Thread(target=run_flask, daemon=True)
-    flask_thread.start()
-    print("🧵 Поток Flask сервера запущен.")
-
-    # --- Запуск Telegram бота в основном потоке ---
-    try:
-        # Создаем новый цикл событий для основного потока
-        # Это необходимо, потому что Flask мог уже запустить цикл
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        
-        # Запускаем бота до тех пор, пока не получим сигнал завершения
-        loop.run_until_complete(run_bot())
-        
-    except KeyboardInterrupt:
-        print("\n⚠️ Получен KeyboardInterrupt (Ctrl+C)")
-    except Exception as e:
-        print(f"💥 Критическая ошибка в основном потоке: {e}")
-    finally:
-        # Сообщаем Flask потоку о завершении (если это возможно)
-        # Flask в отдельном потоке не получит сигнала напрямую,
-        # но при завершении основного процесса он тоже завершится.
-        print("🏁 Основной поток завершен.")
-
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Настройка логирования
     logging.basicConfig(level=logging.INFO)
     print("🏁 Запуск app.py...")
-    keep_alive()
+    
+    # Запускаем бота напрямую если запускаем через python app.py
+    if len(sys.argv) == 1:  # Запуск напрямую через python
+        start_bot_in_thread()
+        
+        # Запускаем Flask в основном потоке
+        try:
+            flask_app.run(debug=False, host="0.0.0.0", port=4000, use_reloader=False)
+        except KeyboardInterrupt:
+            print("\n🛑 Сервер остановлен пользователем")
+        finally:
+            stop_bot_thread()
+    else:
+        # Если запускаем через Gunicorn, бот будет запущен через before_first_request
+        pass
